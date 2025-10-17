@@ -1,0 +1,9 @@
+fastapi
+asyncio
+python-dotenv
+unstructured
+pymongo
+qdrant-client
+google-generativeai
+dramatiq[rabbitmq]
+
