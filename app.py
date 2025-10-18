@@ -45,7 +45,7 @@ def ingest_web_data(url):
 
     chunks = chunk_html_content(html_content=html_content)
 
-    ingest_knowledge(url=url , chunks=chunks)
+    ingest_knowledge(url1=url , chunks=chunks)
 
     insert_data(url , "completed")
 
@@ -89,7 +89,9 @@ async def query_endpoint(request : Request):
 @app.get("/get-status")
 def get_status():
     
-    return get_all_data()
+    data = get_all_data()
+
+    return data
 
 
 

@@ -1,8 +1,10 @@
 import os
-from pymongo import MongoClient
+from pymongo.mongo_client import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 from datetime import datetime
 from dotenv import load_dotenv
+from pymongo.server_api import ServerApi
+
 
 load_dotenv()
 
@@ -10,7 +12,7 @@ load_dotenv()
 MONGODB_URI = os.getenv("MONGODB_URI")
 
     
-client = MongoClient(MONGODB_URI)
+client = MongoClient(MONGODB_URI, server_api=ServerApi('1'))
 
 db = client['Aira_db']
 
@@ -47,7 +49,7 @@ def get_all_data():
 
     try :
 
-        documents = list(collection.find({}))
+        documents = list(collection.find({}, {"_id": 0}))  # Exclude _id
 
         return documents
     except Exception as e :
@@ -55,4 +57,3 @@ def get_all_data():
         print(f"Error fetching data from MongoDB : {e}")
 
         return []
-    

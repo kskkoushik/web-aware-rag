@@ -4,6 +4,8 @@ from qdrant_client.models import Distance, PointStruct , VectorParams
 import google.generativeai as gemini_client
 from dotenv import load_dotenv
 from uuid import uuid4
+import requests
+
 
 
 load_dotenv()
@@ -20,25 +22,38 @@ client = QdrantClient(
 )
 
 
-gemini_client.configure(api_key=GOOGLE_API_KEY)
-def ingest_knowledge(url , chunks):
+def ingest_knowledge(url1 , chunks):
 
-    embeddings = [
-     gemini_client.embed_content(
-        model="models/embedding-001",
-        content=sentence,
-        task_type="retrieval_document",
-        title="AIra Web Knowledge Base",
-    )
-    for sentence in chunks
+    JINA_API_KEY = os.getenv("JINA_API_KEY")
+    MODEL = "jina-embeddings-v3"
+    DIMENSIONS = 768 # Or choose your desired output vector dimensionality.
+    TASK = 'retrieval.passage' # For indexing, or set to retrieval.query for querying
 
-   ]
+    # Get embeddings from the API
+    url = "https://api.jina.ai/v1/embeddings"
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {JINA_API_KEY}",
+    }
+
+    data = {
+        "input": chunks,
+        "model": MODEL,
+        "dimensions": DIMENSIONS,
+        "task": TASK,
+        "late_chunking": True,
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+     
+    embeddings = [d["embedding"] for d in response.json()["data"]]
    
     points = [
     PointStruct(
         id=uuid4().int & ((1 << 64) - 1),
-        vector=response['embedding'],
-        payload={"text": text , 'url' : url},
+        vector=response,
+        payload={"text": text , 'url' : url1},
     )
     for idx, (response, text) in enumerate(zip(embeddings, chunks))
 
@@ -58,22 +73,47 @@ def ingest_knowledge(url , chunks):
 
 def query_knowledge_base(query , topk=15):
 
+
+
+    JINA_API_KEY = os.getenv("JINA_API_KEY")
+    MODEL = "jina-embeddings-v3"
+    DIMENSIONS = 768 # Or choose your desired output vector dimensionality.
+    TASK = 'retrieval.query' # For indexing, or set to retrieval.query for querying
+
+    # Get embeddings from the API
+    url = "https://api.jina.ai/v1/embeddings"
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {JINA_API_KEY}",
+    }
+
+    data = {
+        "input": [query],
+        "model": MODEL,
+        "dimensions": DIMENSIONS,
+        "task": TASK,
+        "late_chunking": True,
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+
+
+    query_vector = response.json()["data"][0]["embedding"]
+
+
     results =  client.search(
     collection_name=collection_name,
-    query_vector=gemini_client.embed_content(
-        model="models/embedding-001",
-        content= query,
-        task_type="retrieval_query",
-    )["embedding"],
+    query_vector=query_vector
     )
 
     results = results[:topk]
 
     elements = [hit.payload for hit in results]
 
+    print(elements)
+
     return elements
-
-
 
 
 
